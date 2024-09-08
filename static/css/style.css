@@ -1,11 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Fredoka One', cursive;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     margin: 0;
     background-color: #f0f0f0;
+    font-size: 18px;
 }
 
 .game-container {
@@ -21,28 +24,30 @@ body {
 }
 
 .player-list {
-    width: 150px;
+    width: 200px;
     padding: 10px;
     background-color: #f9f9f9;
     border-radius: 5px;
 }
 
 .player-item {
-    margin-bottom: 5px;
-    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 20px;
+    position: relative;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(25, 20px);
+    grid-template-columns: repeat(25, 25px);
     grid-gap: 2px;
 }
 
 .cell {
-    width: 20px;
-    height: 20px;
+    width: 25px;
+    height: 25px;
     border: 1px solid #ccc;
     cursor: pointer;
+    border-radius: 50%;
 }
 
 .cell:hover {
@@ -52,16 +57,97 @@ body {
 .message {
     margin-top: 20px;
     text-align: center;
-    font-weight: bold;
+    font-size: 24px;
+    color: #333;
+}
+
+input, button {
+    font-family: 'Fredoka One', cursive;
+    font-size: 18px;
+    margin: 5px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.reset-button {
+    background-color: #f44336;
+    margin-top: 20px;
+}
+
+.reset-button:hover {
+    background-color: #d32f2f;
+}
+
+#ready-indicator {
+    width: 100px;
+    height: 30px;
+    background-color: green;
+    color: white;
+    text-align: center;
+    line-height: 30px;
+    border-radius: 15px;
+    margin-top: 10px;
+}
+
+.score-popup {
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    background-color: gold;
+    color: black;
+    padding: 5px 10px;
+    border-radius: 50%;
+    font-size: 16px;
+    animation: popup 1s ease-out;
+}
+
+@keyframes popup {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
 }
 
 @media (max-width: 768px) {
     .grid {
-        grid-template-columns: repeat(25, 12px);
+        grid-template-columns: repeat(25, 15px);
     }
 
     .cell {
-        width: 12px;
-        height: 12px;
+        width: 15px;
+        height: 15px;
+    }
+
+    body {
+        font-size: 16px;
+    }
+
+    .player-item {
+        font-size: 18px;
+    }
+
+    .message {
+        font-size: 20px;
     }
 }

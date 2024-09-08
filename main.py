@@ -53,10 +53,6 @@ def handle_place_marker(data):
         emit('error', {'message': 'Player not set up'})
         return
 
-    if current_time - last_move_time[player_id] < 1:
-        emit('error', {'message': 'Please wait 1 second between moves'})
-        return
-
     col = data['col']
     row = -1
     for i in range(9, -1, -1):
@@ -77,6 +73,18 @@ def handle_place_marker(data):
         check_winner(row, col)
     else:
         emit('error', {'message': 'This column is full'})
+
+
+@socketio.on('reset_game')
+def handle_reset_game():
+    global grid, scores
+    grid = [[None for _ in range(25)] for _ in range(10)]
+    scores = {player_id: 0 for player_id in players}
+    emit('game_reset', {
+        'grid': grid,
+        'players': get_players_list()
+    }, broadcast=True)
+    emit('clear_highlights', broadcast=True)
 
 
 def check_winner(row, col):
@@ -106,13 +114,11 @@ def check_winner(row, col):
             winner = next(player for player, data in players.items()
                           if data['color'] == color)
             scores[winner] += 1
-            emit('winner', {
-                'name': players[winner]['name'],
-                'color': color,
-                'cells': winning_cells,
-                'players': get_players_list()
-            },
-                 broadcast=True)
+            emit('score_update', {
+                'player_id': winner,
+                'new_score': scores[winner],
+                'winning_cells': winning_cells
+            }, broadcast=True)
             return
 
 

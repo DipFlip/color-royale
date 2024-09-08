@@ -11,6 +11,8 @@ const startGameButton = document.getElementById('start-game');
 const playerNameInput = document.getElementById('player-name');
 const playerColorInput = document.getElementById('player-color');
 const playerList = document.getElementById('player-list');
+const resetButton = document.getElementById('reset-game');
+const readyIndicator = document.getElementById('ready-indicator');
 
 startGameButton.addEventListener('click', () => {
     playerName = playerNameInput.value.trim();
@@ -23,6 +25,10 @@ startGameButton.addEventListener('click', () => {
     } else {
         message.textContent = 'Please enter your name and choose a color.';
     }
+});
+
+resetButton.addEventListener('click', () => {
+    socket.emit('reset_game');
 });
 
 function createGrid() {
@@ -41,7 +47,10 @@ function createGrid() {
 function handleCellClick(event) {
     const currentTime = Date.now();
     if (currentTime - lastMoveTime < 1000) {
-        message.textContent = 'Please wait 1 second between moves';
+        readyIndicator.style.backgroundColor = 'red';
+        setTimeout(() => {
+            readyIndicator.style.backgroundColor = 'green';
+        }, 1000);
         return;
     }
 
@@ -50,6 +59,10 @@ function handleCellClick(event) {
 
     socket.emit('place_marker', { col });
     lastMoveTime = currentTime;
+    readyIndicator.style.backgroundColor = 'red';
+    setTimeout(() => {
+        readyIndicator.style.backgroundColor = 'green';
+    }, 1000);
 }
 
 function updateGrid(gridData, row, col, color) {
@@ -86,6 +99,7 @@ function updatePlayerList(players) {
         playerElement.classList.add('player-item');
         playerElement.style.color = player.color;
         playerElement.textContent = `${player.name}: ${player.score}`;
+        playerElement.dataset.playerId = player.id;
         playerList.appendChild(playerElement);
     });
 }
@@ -104,13 +118,40 @@ socket.on('update_players', (data) => {
     updatePlayerList(data.players);
 });
 
-socket.on('winner', (data) => {
-    message.textContent = `Player ${data.name} (${data.color}) wins!`;
-    data.cells.forEach(([row, col]) => {
+socket.on('score_update', (data) => {
+    const playerElement = document.querySelector(`.player-item[data-player-id="${data.player_id}"]`);
+    if (playerElement) {
+        const playerName = playerElement.textContent.split(':')[0];
+        playerElement.textContent = `${playerName}: ${data.new_score}`;
+        
+        const popUp = document.createElement('div');
+        popUp.textContent = '+1';
+        popUp.classList.add('score-popup');
+        playerElement.appendChild(popUp);
+        setTimeout(() => {
+            popUp.remove();
+        }, 1000);
+    }
+    
+    data.winning_cells.forEach(([row, col]) => {
         const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
         cell.style.border = '2px solid gold';
     });
+});
+
+socket.on('game_reset', (data) => {
+    message.textContent = 'Game has been reset!';
+    updateGrid(data.grid);
     updatePlayerList(data.players);
+    document.querySelectorAll('.cell').forEach(cell => {
+        cell.style.border = '1px solid #ccc';
+    });
+});
+
+socket.on('clear_highlights', () => {
+    document.querySelectorAll('.cell').forEach(cell => {
+        cell.style.border = '1px solid #ccc';
+    });
 });
 
 socket.on('error', (data) => {
