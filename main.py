@@ -12,12 +12,20 @@ grid = [[None for _ in range(25)] for _ in range(10)]
 players = {}
 last_move_time = {}
 scores = {}
+star_positions = []
 
+def generate_star_positions():
+    global star_positions
+    star_positions = []
+    while len(star_positions) < 5:
+        row = random.randint(0, 9)
+        col = random.randint(0, 24)
+        if (row, col) not in star_positions:
+            star_positions.append((row, col))
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
 
 @socketio.on('player_setup')
 def handle_player_setup(data):
@@ -27,10 +35,9 @@ def handle_player_setup(data):
     scores[player_id] = 0
     emit('game_started', {
         'grid': grid,
-        'players': get_players_list()
-    },
-         broadcast=True)
-
+        'players': get_players_list(),
+        'star_positions': star_positions
+    }, broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -42,7 +49,6 @@ def handle_disconnect():
     if player_id in scores:
         del scores[player_id]
     emit('update_players', {'players': get_players_list()}, broadcast=True)
-
 
 @socketio.on('place_marker')
 def handle_place_marker(data):
@@ -63,29 +69,37 @@ def handle_place_marker(data):
     if row != -1:
         grid[row][col] = players[player_id]['color']
         last_move_time[player_id] = current_time
+        points = 0
+        if (row, col) in star_positions:
+            scores[player_id] += 2
+            star_positions.remove((row, col))
+            points = 2
         emit('update_grid', {
             'grid': grid,
             'row': row,
             'col': col,
-            'color': players[player_id]['color']
-        },
-             broadcast=True)
+            'color': players[player_id]['color'],
+            'star_positions': star_positions,
+            'player_id': player_id,
+            'new_score': scores[player_id],
+            'points': points
+        }, broadcast=True)
         check_winner(row, col)
     else:
         emit('error', {'message': 'This column is full'})
-
 
 @socketio.on('reset_game')
 def handle_reset_game():
     global grid, scores
     grid = [[None for _ in range(25)] for _ in range(10)]
     scores = {player_id: 0 for player_id in players}
+    generate_star_positions()
     emit('game_reset', {
         'grid': grid,
-        'players': get_players_list()
+        'players': get_players_list(),
+        'star_positions': star_positions
     }, broadcast=True)
     emit('clear_highlights', broadcast=True)
-
 
 def check_winner(row, col):
     color = grid[row][col]
@@ -113,14 +127,12 @@ def check_winner(row, col):
             ]
             winner = next(player for player, data in players.items()
                           if data['color'] == color)
-            scores[winner] += 1
             emit('score_update', {
                 'player_id': winner,
                 'new_score': scores[winner],
                 'winning_cells': winning_cells
             }, broadcast=True)
             return
-
 
 def get_players_list():
     return [{
@@ -130,8 +142,8 @@ def get_players_list():
         'score': scores[player_id]
     } for player_id, data in players.items()]
 
-
 if __name__ == '__main__':
+    generate_star_positions()
     socketio.run(app,
                  host='0.0.0.0',
                  port=5000,

@@ -14,16 +14,23 @@ const playerList = document.getElementById('player-list');
 const resetButton = document.getElementById('reset-game');
 const readyIndicator = document.getElementById('ready-indicator');
 
+function getRandomColor() {
+    return '#' + Math.floor(Math.random()*16777215).toString(16);
+}
+
+// Set a random initial color when the page loads
+playerColorInput.value = getRandomColor();
+
 startGameButton.addEventListener('click', () => {
     playerName = playerNameInput.value.trim();
     playerColor = playerColorInput.value;
     
-    if (playerName && playerColor) {
+    if (playerName) {
         socket.emit('player_setup', { name: playerName, color: playerColor });
         playerSetup.style.display = 'none';
         gameArea.style.display = 'flex';
     } else {
-        message.textContent = 'Please enter your name and choose a color.';
+        message.textContent = 'Please enter your name.';
     }
 });
 
@@ -65,7 +72,7 @@ function handleCellClick(event) {
     }, 1000);
 }
 
-function updateGrid(gridData, row, col, color) {
+function updateGrid(gridData, row, col, color, starPositions) {
     if (row !== undefined && col !== undefined && color !== undefined) {
         // Animate the dropping of the marker
         let currentRow = 0;
@@ -79,6 +86,9 @@ function updateGrid(gridData, row, col, color) {
             currentRow++;
             if (currentRow > row) {
                 clearInterval(dropInterval);
+                if (starPositions) {
+                    drawStars(starPositions);
+                }
             }
         }, 50);
     } else {
@@ -89,6 +99,9 @@ function updateGrid(gridData, row, col, color) {
             const col = index % 25;
             cell.style.backgroundColor = gridData[row][col] || 'white';
         });
+        if (starPositions) {
+            drawStars(starPositions);
+        }
     }
 }
 
@@ -104,34 +117,59 @@ function updatePlayerList(players) {
     });
 }
 
+function drawStars(starPositions) {
+    const cells = document.querySelectorAll('.cell');
+    cells.forEach((cell) => {
+        cell.innerHTML = '';
+    });
+    if (starPositions && Array.isArray(starPositions)) {
+        starPositions.forEach(([row, col]) => {
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            if (cell) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                cell.appendChild(star);
+            }
+        });
+    }
+}
+
 socket.on('game_started', (data) => {
     message.textContent = `Game started! Your color is ${playerColor}`;
     updateGrid(data.grid);
     updatePlayerList(data.players);
+    drawStars(data.star_positions);
 });
 
 socket.on('update_grid', (data) => {
-    updateGrid(data.grid, data.row, data.col, data.color);
+    updateGrid(data.grid, data.row, data.col, data.color, data.star_positions);
+    updatePlayerScore(data.player_id, data.new_score, data.points);
 });
 
 socket.on('update_players', (data) => {
     updatePlayerList(data.players);
 });
 
-socket.on('score_update', (data) => {
-    const playerElement = document.querySelector(`.player-item[data-player-id="${data.player_id}"]`);
+function updatePlayerScore(playerId, newScore, points) {
+    const playerElement = document.querySelector(`.player-item[data-player-id="${playerId}"]`);
     if (playerElement) {
         const playerName = playerElement.textContent.split(':')[0];
-        playerElement.textContent = `${playerName}: ${data.new_score}`;
+        playerElement.textContent = `${playerName}: ${newScore}`;
         
-        const popUp = document.createElement('div');
-        popUp.textContent = '+1';
-        popUp.classList.add('score-popup');
-        playerElement.appendChild(popUp);
-        setTimeout(() => {
-            popUp.remove();
-        }, 1000);
+        if (points > 0) {
+            const popUp = document.createElement('div');
+            popUp.textContent = `+${points}`;
+            popUp.classList.add('score-popup');
+            playerElement.appendChild(popUp);
+            setTimeout(() => {
+                popUp.remove();
+            }, 1000);
+        }
     }
+}
+
+socket.on('score_update', (data) => {
+    updatePlayerScore(data.player_id, data.new_score, 1);
     
     data.winning_cells.forEach(([row, col]) => {
         const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
@@ -143,6 +181,7 @@ socket.on('game_reset', (data) => {
     message.textContent = 'Game has been reset!';
     updateGrid(data.grid);
     updatePlayerList(data.players);
+    drawStars(data.star_positions);
     document.querySelectorAll('.cell').forEach(cell => {
         cell.style.border = '1px solid #ccc';
     });
