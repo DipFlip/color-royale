@@ -1,9 +1,27 @@
 const socket = io();
 let playerColor;
+let playerName;
 let lastMoveTime = 0;
 
 const grid = document.getElementById('grid');
 const message = document.getElementById('message');
+const playerSetup = document.getElementById('player-setup');
+const startGameButton = document.getElementById('start-game');
+const playerNameInput = document.getElementById('player-name');
+const playerColorInput = document.getElementById('player-color');
+
+startGameButton.addEventListener('click', () => {
+    playerName = playerNameInput.value.trim();
+    playerColor = playerColorInput.value;
+    
+    if (playerName && playerColor) {
+        socket.emit('player_setup', { name: playerName, color: playerColor });
+        playerSetup.style.display = 'none';
+        grid.style.display = 'grid';
+    } else {
+        message.textContent = 'Please enter your name and choose a color.';
+    }
+});
 
 function createGrid() {
     for (let row = 0; row < 10; row++) {
@@ -59,9 +77,9 @@ function updateGrid(gridData, row, col, color) {
     }
 }
 
-socket.on('color_assigned', (data) => {
-    playerColor = data.color;
-    message.textContent = `Your color is ${playerColor}`;
+socket.on('game_started', (data) => {
+    message.textContent = `Game started! Your color is ${playerColor}`;
+    updateGrid(data.grid);
 });
 
 socket.on('update_grid', (data) => {
@@ -69,7 +87,7 @@ socket.on('update_grid', (data) => {
 });
 
 socket.on('winner', (data) => {
-    message.textContent = `Player ${data.color} wins!`;
+    message.textContent = `Player ${data.name} (${data.color}) wins!`;
     data.cells.forEach(([row, col]) => {
         const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
         cell.style.border = '2px solid gold';
@@ -81,3 +99,4 @@ socket.on('error', (data) => {
 });
 
 createGrid();
+grid.style.display = 'none';

@@ -16,26 +16,34 @@ last_move_time = {}
 def index():
     return render_template('index.html')
 
-@socketio.on('connect')
-def handle_connect():
-    # Assign a unique color to the new player
-    color = "#{:06x}".format(random.randint(0, 0xFFFFFF))
-    players[request.sid] = color
-    last_move_time[request.sid] = 0
-    emit('color_assigned', {'color': color})
-    emit('update_grid', {'grid': grid}, broadcast=True)
+@socketio.on('player_setup')
+def handle_player_setup(data):
+    player_id = request.sid
+    players[player_id] = {
+        'name': data['name'],
+        'color': data['color']
+    }
+    last_move_time[player_id] = 0
+    emit('game_started', {'grid': grid})
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    del players[request.sid]
-    del last_move_time[request.sid]
+    player_id = request.sid
+    if player_id in players:
+        del players[player_id]
+    if player_id in last_move_time:
+        del last_move_time[player_id]
 
 @socketio.on('place_marker')
 def handle_place_marker(data):
-    player = request.sid
+    player_id = request.sid
     current_time = time.time()
     
-    if current_time - last_move_time[player] < 1:
+    if player_id not in players:
+        emit('error', {'message': 'Player not set up'})
+        return
+    
+    if current_time - last_move_time[player_id] < 1:
         emit('error', {'message': 'Please wait 1 second between moves'})
         return
 
@@ -47,9 +55,9 @@ def handle_place_marker(data):
             break
 
     if row != -1:
-        grid[row][col] = players[player]
-        last_move_time[player] = current_time
-        emit('update_grid', {'grid': grid, 'row': row, 'col': col, 'color': players[player]}, broadcast=True)
+        grid[row][col] = players[player_id]['color']
+        last_move_time[player_id] = current_time
+        emit('update_grid', {'grid': grid, 'row': row, 'col': col, 'color': players[player_id]['color']}, broadcast=True)
         check_winner(row, col)
     else:
         emit('error', {'message': 'This column is full'})
@@ -74,7 +82,8 @@ def check_winner(row, col):
                 break
         if count >= 4:
             winning_cells = [(row + i * dr, col + i * dc) for i in range(-3, 4) if 0 <= row + i * dr < 10 and 0 <= col + i * dc < 25 and grid[row + i * dr][col + i * dc] == color]
-            emit('winner', {'color': color, 'cells': winning_cells}, broadcast=True)
+            winner = next(player for player in players.values() if player['color'] == color)
+            emit('winner', {'name': winner['name'], 'color': color, 'cells': winning_cells}, broadcast=True)
             return
 
 if __name__ == '__main__':
