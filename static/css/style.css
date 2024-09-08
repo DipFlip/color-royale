@@ -16,6 +16,8 @@ body {
     border-radius: 10px;
     padding: 20px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 #game-area {
@@ -143,25 +145,82 @@ button:hover {
     z-index: 1;
 }
 
-@media (max-width: 768px) {
+#game-title {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+#game-title span {
+    display: inline-block;
+    animation: colorChange 5s infinite;
+}
+
+@keyframes colorChange {
+    0% { color: red; }
+    25% { color: blue; }
+    50% { color: green; }
+    75% { color: orange; }
+    100% { color: purple; }
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+    body {
+        font-size: 14px;
+        height: auto;
+        padding: 20px 0;
+    }
+
+    .game-container {
+        width: 100%;
+        padding: 10px 0;
+    }
+
+    #game-area {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .player-list {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
     .grid {
-        grid-template-columns: repeat(25, 15px);
+        width: 100%;
+        overflow-x: auto;
+        grid-template-columns: repeat(25, 10px);
     }
 
     .cell {
-        width: 15px;
-        height: 15px;
-    }
-
-    body {
-        font-size: 16px;
+        width: 10px;
+        height: 10px;
     }
 
     .player-item {
-        font-size: 18px;
+        font-size: 16px;
     }
 
     .message {
-        font-size: 20px;
+        font-size: 18px;
+    }
+
+    input, button {
+        font-size: 16px;
+        padding: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 5px 0;
+    }
+
+    #ready-indicator {
+        width: 80px;
+        height: 24px;
+        line-height: 24px;
+        font-size: 12px;
+    }
+
+    #game-title {
+        font-size: 24px;
     }
 }

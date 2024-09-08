@@ -104,6 +104,7 @@ def handle_reset_game():
 def check_winner(row, col):
     color = grid[row][col]
     directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+    player_id = next(player for player, data in players.items() if data['color'] == color)
 
     for dr, dc in directions:
         count = 1
@@ -120,16 +121,15 @@ def check_winner(row, col):
             else:
                 break
         if count >= 4:
+            scores[player_id] += count - 3  # Add points for the winning combination
             winning_cells = [
                 (row + i * dr, col + i * dc) for i in range(-3, 4)
-                if 0 <= row + i * dr < 10 and 0 <= col +
-                i * dc < 25 and grid[row + i * dr][col + i * dc] == color
+                if 0 <= row + i * dr < 10 and 0 <= col + i * dc < 25 and grid[row + i * dr][col + i * dc] == color
             ]
-            winner = next(player for player, data in players.items()
-                          if data['color'] == color)
             emit('score_update', {
-                'player_id': winner,
-                'new_score': scores[winner],
+                'player_id': player_id,
+                'new_score': scores[player_id],
+                'points': count - 3,
                 'winning_cells': winning_cells
             }, broadcast=True)
             return

@@ -169,7 +169,7 @@ function updatePlayerScore(playerId, newScore, points) {
 }
 
 socket.on('score_update', (data) => {
-    updatePlayerScore(data.player_id, data.new_score, 1);
+    updatePlayerScore(data.player_id, data.new_score, data.points);
     
     data.winning_cells.forEach(([row, col]) => {
         const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
@@ -197,4 +197,19 @@ socket.on('error', (data) => {
     message.textContent = data.message;
 });
 
-createGrid();
+function createColoredTitle() {
+    const titleElement = document.getElementById('game-title');
+    const text = titleElement.textContent;
+    titleElement.innerHTML = '';
+    for (let i = 0; i < text.length; i++) {
+        const span = document.createElement('span');
+        span.textContent = text[i];
+        span.style.animationDelay = `${i * 0.1}s`;
+        titleElement.appendChild(span);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    createGrid();
+    createColoredTitle();
+});
