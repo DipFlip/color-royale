@@ -13,20 +13,24 @@ players = {}
 last_move_time = {}
 scores = {}
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @socketio.on('player_setup')
 def handle_player_setup(data):
     player_id = request.sid
-    players[player_id] = {
-        'name': data['name'],
-        'color': data['color']
-    }
+    players[player_id] = {'name': data['name'], 'color': data['color']}
     last_move_time[player_id] = 0
     scores[player_id] = 0
-    emit('game_started', {'grid': grid, 'players': get_players_list()}, broadcast=True)
+    emit('game_started', {
+        'grid': grid,
+        'players': get_players_list()
+    },
+         broadcast=True)
+
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -39,15 +43,16 @@ def handle_disconnect():
         del scores[player_id]
     emit('update_players', {'players': get_players_list()}, broadcast=True)
 
+
 @socketio.on('place_marker')
 def handle_place_marker(data):
     player_id = request.sid
     current_time = time.time()
-    
+
     if player_id not in players:
         emit('error', {'message': 'Player not set up'})
         return
-    
+
     if current_time - last_move_time[player_id] < 1:
         emit('error', {'message': 'Please wait 1 second between moves'})
         return
@@ -62,15 +67,22 @@ def handle_place_marker(data):
     if row != -1:
         grid[row][col] = players[player_id]['color']
         last_move_time[player_id] = current_time
-        emit('update_grid', {'grid': grid, 'row': row, 'col': col, 'color': players[player_id]['color']}, broadcast=True)
+        emit('update_grid', {
+            'grid': grid,
+            'row': row,
+            'col': col,
+            'color': players[player_id]['color']
+        },
+             broadcast=True)
         check_winner(row, col)
     else:
         emit('error', {'message': 'This column is full'})
 
+
 def check_winner(row, col):
     color = grid[row][col]
     directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
-    
+
     for dr, dc in directions:
         count = 1
         for i in range(1, 4):
@@ -86,14 +98,36 @@ def check_winner(row, col):
             else:
                 break
         if count >= 4:
-            winning_cells = [(row + i * dr, col + i * dc) for i in range(-3, 4) if 0 <= row + i * dr < 10 and 0 <= col + i * dc < 25 and grid[row + i * dr][col + i * dc] == color]
-            winner = next(player for player, data in players.items() if data['color'] == color)
+            winning_cells = [
+                (row + i * dr, col + i * dc) for i in range(-3, 4)
+                if 0 <= row + i * dr < 10 and 0 <= col +
+                i * dc < 25 and grid[row + i * dr][col + i * dc] == color
+            ]
+            winner = next(player for player, data in players.items()
+                          if data['color'] == color)
             scores[winner] += 1
-            emit('winner', {'name': players[winner]['name'], 'color': color, 'cells': winning_cells, 'players': get_players_list()}, broadcast=True)
+            emit('winner', {
+                'name': players[winner]['name'],
+                'color': color,
+                'cells': winning_cells,
+                'players': get_players_list()
+            },
+                 broadcast=True)
             return
 
+
 def get_players_list():
-    return [{'id': player_id, 'name': data['name'], 'color': data['color'], 'score': scores[player_id]} for player_id, data in players.items()]
+    return [{
+        'id': player_id,
+        'name': data['name'],
+        'color': data['color'],
+        'score': scores[player_id]
+    } for player_id, data in players.items()]
+
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app,
+                 host='0.0.0.0',
+                 port=5000,
+                 debug=True,
+                 allow_unsafe_werkzeug=True)
