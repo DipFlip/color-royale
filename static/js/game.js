@@ -6,9 +6,11 @@ let lastMoveTime = 0;
 const grid = document.getElementById('grid');
 const message = document.getElementById('message');
 const playerSetup = document.getElementById('player-setup');
+const gameArea = document.getElementById('game-area');
 const startGameButton = document.getElementById('start-game');
 const playerNameInput = document.getElementById('player-name');
 const playerColorInput = document.getElementById('player-color');
+const playerList = document.getElementById('player-list');
 
 startGameButton.addEventListener('click', () => {
     playerName = playerNameInput.value.trim();
@@ -17,7 +19,7 @@ startGameButton.addEventListener('click', () => {
     if (playerName && playerColor) {
         socket.emit('player_setup', { name: playerName, color: playerColor });
         playerSetup.style.display = 'none';
-        grid.style.display = 'grid';
+        gameArea.style.display = 'flex';
     } else {
         message.textContent = 'Please enter your name and choose a color.';
     }
@@ -77,13 +79,29 @@ function updateGrid(gridData, row, col, color) {
     }
 }
 
+function updatePlayerList(players) {
+    playerList.innerHTML = '';
+    players.forEach(player => {
+        const playerElement = document.createElement('div');
+        playerElement.classList.add('player-item');
+        playerElement.style.color = player.color;
+        playerElement.textContent = `${player.name}: ${player.score}`;
+        playerList.appendChild(playerElement);
+    });
+}
+
 socket.on('game_started', (data) => {
     message.textContent = `Game started! Your color is ${playerColor}`;
     updateGrid(data.grid);
+    updatePlayerList(data.players);
 });
 
 socket.on('update_grid', (data) => {
     updateGrid(data.grid, data.row, data.col, data.color);
+});
+
+socket.on('update_players', (data) => {
+    updatePlayerList(data.players);
 });
 
 socket.on('winner', (data) => {
@@ -92,6 +110,7 @@ socket.on('winner', (data) => {
         const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
         cell.style.border = '2px solid gold';
     });
+    updatePlayerList(data.players);
 });
 
 socket.on('error', (data) => {
@@ -99,4 +118,3 @@ socket.on('error', (data) => {
 });
 
 createGrid();
-grid.style.display = 'none';

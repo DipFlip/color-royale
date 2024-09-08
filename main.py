@@ -11,6 +11,7 @@ socketio = SocketIO(app)
 grid = [[None for _ in range(25)] for _ in range(10)]
 players = {}
 last_move_time = {}
+scores = {}
 
 @app.route('/')
 def index():
@@ -24,7 +25,8 @@ def handle_player_setup(data):
         'color': data['color']
     }
     last_move_time[player_id] = 0
-    emit('game_started', {'grid': grid})
+    scores[player_id] = 0
+    emit('game_started', {'grid': grid, 'players': get_players_list()}, broadcast=True)
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -33,6 +35,9 @@ def handle_disconnect():
         del players[player_id]
     if player_id in last_move_time:
         del last_move_time[player_id]
+    if player_id in scores:
+        del scores[player_id]
+    emit('update_players', {'players': get_players_list()}, broadcast=True)
 
 @socketio.on('place_marker')
 def handle_place_marker(data):
@@ -82,9 +87,13 @@ def check_winner(row, col):
                 break
         if count >= 4:
             winning_cells = [(row + i * dr, col + i * dc) for i in range(-3, 4) if 0 <= row + i * dr < 10 and 0 <= col + i * dc < 25 and grid[row + i * dr][col + i * dc] == color]
-            winner = next(player for player in players.values() if player['color'] == color)
-            emit('winner', {'name': winner['name'], 'color': color, 'cells': winning_cells}, broadcast=True)
+            winner = next(player for player, data in players.items() if data['color'] == color)
+            scores[winner] += 1
+            emit('winner', {'name': players[winner]['name'], 'color': color, 'cells': winning_cells, 'players': get_players_list()}, broadcast=True)
             return
+
+def get_players_list():
+    return [{'id': player_id, 'name': data['name'], 'color': data['color'], 'score': scores[player_id]} for player_id, data in players.items()]
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
